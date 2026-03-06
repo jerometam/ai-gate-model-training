@@ -1,14 +1,14 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Teachable Machine Hovercraft Demo</title>
+  <title>教學機器 Hovercraft 示範</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #webcam-container { margin-top: 20px; }
+    body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 20px; text-align: center; }
+    #webcam-container { margin-top: 20px; display: flex; justify-content: center; }
+    canvas { width: 100%; height: auto; }
     #label-container div { margin: 5px 0; }
     #error-message { color: red; font-weight: bold; margin-top: 10px; }
     #detected-message { font-size: 20px; font-weight: bold; color: orange; margin-top: 10px; }
@@ -18,10 +18,10 @@
   </style>
 </head>
 <body>
-  <h2>Teachable Machine Hovercraft Demo</h2>
-  <p>Paste your Teachable Machine model URL (must have exactly two classes: <b>Hovercraft</b> and <b>No Hovercraft</b>)</p>
-  <input type="text" id="modelURL" placeholder="Paste model URL here" size="60">
-  <button type="button" onclick="init()">Start Model</button>
+  <h2>教學機器 Hovercraft 示範</h2>
+  <p>請貼上你的 Teachable Machine 模型網址（必須有兩個類別：<b>Hovercraft</b> 與 <b>No Hovercraft</b>）</p>
+  <input type="text" id="modelURL" placeholder="請在此貼上模型網址" size="60">
+  <button type="button" onclick="init()">開始模型</button>
 
   <div id="error-message"></div>
   <div id="webcam-container"></div>
@@ -49,7 +49,7 @@
       document.getElementById("pass-countdown").innerHTML = "";
 
       if (!baseURL) {
-        errorBox.innerHTML = "Please enter a model URL first.";
+        errorBox.innerHTML = "請先輸入模型網址。";
         return;
       }
 
@@ -64,7 +64,7 @@
         if (maxPredictions !== 2 ||
             classes[0] !== "Hovercraft" ||
             classes[1] !== "No Hovercraft") {
-          errorBox.innerHTML = "Model must have exactly two classes: 'Hovercraft' and 'No Hovercraft' (case-sensitive).";
+          errorBox.innerHTML = "模型必須有兩個類別：'Hovercraft' 與 'No Hovercraft'（大小寫需完全符合）。";
           return;
         }
 
@@ -83,8 +83,8 @@
           labelContainer.appendChild(document.createElement("div"));
         }
       } catch (err) {
-        console.error("Error loading model or webcam:", err);
-        errorBox.innerHTML = "Failed to load model or webcam. Check console for details.";
+        console.error("載入模型或攝影機錯誤:", err);
+        errorBox.innerHTML = "載入模型或攝影機失敗，請查看 Console。";
       }
     }
 
@@ -112,7 +112,7 @@
         const elapsed = (Date.now() - hovercraftStartTime) / 1000;
 
         if (elapsed < 1) {
-          document.getElementById("detected-message").innerText = "Hovercraft Detected";
+          document.getElementById("detected-message").innerText = "偵測到 Hovercraft";
         } else if (elapsed >= 1 && !countdownTimer) {
           document.getElementById("detected-message").innerText = "";
           startCountdown();
@@ -124,17 +124,17 @@
     }
 
     function startCountdown() {
-      countdownValue = 5;
-      document.getElementById("countdown").innerText = "Countdown: " + countdownValue;
+      countdownValue = 3;
+      document.getElementById("countdown").innerText = "倒數：" + countdownValue;
       countdownTimer = setInterval(() => {
         countdownValue--;
         if (countdownValue > 0) {
-          document.getElementById("countdown").innerText = "Countdown: " + countdownValue;
+          document.getElementById("countdown").innerText = "倒數：" + countdownValue;
         } else {
           clearInterval(countdownTimer);
           countdownTimer = null;
           document.getElementById("countdown").innerText = "";
-          document.getElementById("gate-message").innerText = "Gate Open";
+          document.getElementById("gate-message").innerText = "閘門開啟";
           console.log("HOVERCRAFT");
           startPassCountdown();
         }
@@ -143,11 +143,11 @@
 
     function startPassCountdown() {
       passValue = 30;
-      document.getElementById("pass-countdown").innerText = "Gate will close in: " + passValue + "s";
+      document.getElementById("pass-countdown").innerText = "閘門將在 " + passValue + " 秒後關閉";
       passTimer = setInterval(() => {
         passValue--;
         if (passValue > 0) {
-          document.getElementById("pass-countdown").innerText = "Gate will close in: " + passValue + "s";
+          document.getElementById("pass-countdown").innerText = "閘門將在 " + passValue + " 秒後關閉";
         } else {
           clearInterval(passTimer);
           passTimer = null;
