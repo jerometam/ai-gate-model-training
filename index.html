@@ -17,6 +17,23 @@
     <div id="info-container">
       <h2>Teachable Machine Hovercraft 偵測測試</h2>
       <p>請貼上你的 Teachable Machine 模型網址（必須有兩個類別：<b>Hovercraft</b> 與 <b>No Hovercraft</b>）</p>
+      <details>
+        <summary>如何建立並取得模型網址（點擊展開）</summary>
+        <div style="margin-top:10px; line-height:1.6;">
+          <ol>
+            <li>打開 <a href="https://teachablemachine.withgoogle.com/" target="_blank">Teachable Machine</a> 網站。</li>
+            <li>選擇「影像專案 (Image Project)」。</li>
+            <li>建立兩個類別：<b>Hovercraft</b> 與 <b>No Hovercraft</b>。</li>
+            <li>在「Hovercraft」類別中，上傳或拍攝包含氣墊船的照片。</li>
+            <li>在「No Hovercraft」類別中，上傳或拍攝不包含氣墊船的照片。</li>
+            <li>完成影像收集後，點擊「訓練模型 (Train Model)」。</li>
+            <li>等待訓練完成，然後點擊「匯出模型 (Export Model)」。</li>
+            <li>選擇「TensorFlow.js」格式，並複製提供的模型網址。</li>
+            <li>將該網址貼到右邊的輸入框中，然後按下「開始模型」。</li>
+          </ol>
+          <p>這樣就能在本頁面使用你訓練好的模型進行偵測。</p>
+        </div>
+      </details>
       <input type="text" id="modelURL" placeholder="請在此貼上模型網址" size="40">
       <button type="button" onclick="init()">開始模型</button>
 
