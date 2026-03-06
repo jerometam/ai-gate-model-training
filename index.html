@@ -2,13 +2,31 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>教學機器 Hovercraft 示範</title>
+  <title>沙田區小學 AI 創意解難挑戰賽 | 極速氣墊船彎道賽閘門測試</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
   <style>
-    body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 20px; text-align: center; }
-    #webcam-container { margin-top: 20px; display: flex; justify-content: center; }
-    canvas { width: 100%; height: auto; }
+    body { font-family: "Microsoft JhengHei", Arial, sans-serif; margin: 20px; }
+    #main-container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+    }
+    #webcam-container {
+      flex: 7; /* 70% */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f0f0f0;
+    }
+    #webcam-container canvas {
+      width: 100%;
+      height: auto;
+    }
+    #info-container {
+      flex: 3; /* 30% */
+      padding: 20px;
+    }
     #label-container div { margin: 5px 0; }
     #error-message { color: red; font-weight: bold; margin-top: 10px; }
     #detected-message { font-size: 20px; font-weight: bold; color: orange; margin-top: 10px; }
@@ -18,18 +36,26 @@
   </style>
 </head>
 <body>
-  <h2>教學機器 Hovercraft 示範</h2>
+  <h2>Teachable Machine Hovercraft 偵測測試</h2>
   <p>請貼上你的 Teachable Machine 模型網址（必須有兩個類別：<b>Hovercraft</b> 與 <b>No Hovercraft</b>）</p>
   <input type="text" id="modelURL" placeholder="請在此貼上模型網址" size="60">
   <button type="button" onclick="init()">開始模型</button>
 
   <div id="error-message"></div>
-  <div id="webcam-container"></div>
-  <div id="label-container"></div>
-  <div id="detected-message"></div>
-  <div id="countdown"></div>
-  <div id="gate-message"></div>
-  <div id="pass-countdown"></div>
+
+  <div id="main-container">
+    <!-- 左邊 70% webcam -->
+    <div id="webcam-container"></div>
+
+    <!-- 右邊 30% 提示文字 -->
+    <div id="info-container">
+      <div id="label-container"></div>
+      <div id="detected-message"></div>
+      <div id="countdown"></div>
+      <div id="gate-message"></div>
+      <div id="pass-countdown"></div>
+    </div>
+  </div>
 
   <script type="text/javascript">
     let model, webcam, labelContainer, maxPredictions;
