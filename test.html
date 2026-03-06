@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Teachable Machine Hovercraft Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #webcam-container { margin-top: 20px; }
+    #label-container div { margin: 5px 0; }
+    #error-message { color: red; font-weight: bold; margin-top: 10px; }
+    #detected-message { font-size: 20px; font-weight: bold; color: orange; margin-top: 10px; }
+    #countdown { font-size: 20px; font-weight: bold; color: blue; margin-top: 10px; }
+    #gate-message { font-size: 24px; font-weight: bold; color: green; margin-top: 10px; }
+    #pass-countdown { font-size: 20px; font-weight: bold; color: purple; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Teachable Machine Hovercraft Demo</h2>
+  <p>Paste your Teachable Machine model URL (must have exactly two classes: <b>Hovercraft</b> and <b>No Hovercraft</b>)</p>
+  <input type="text" id="modelURL" placeholder="Paste model URL here" size="60">
+  <button type="button" onclick="init()">Start Model</button>
+
+  <div id="error-message"></div>
+  <div id="webcam-container"></div>
+  <div id="label-container"></div>
+  <div id="detected-message"></div>
+  <div id="countdown"></div>
+  <div id="gate-message"></div>
+  <div id="pass-countdown"></div>
+
+  <script type="text/javascript">
+    let model, webcam, labelContainer, maxPredictions;
+    let countdownTimer = null;
+    let countdownValue = 3;
+    let hovercraftStartTime = null;
+    let passTimer = null;
+    let passValue = 30;
+
+    async function init() {
+      const baseURL = document.getElementById("modelURL").value.trim();
+      const errorBox = document.getElementById("error-message");
+      errorBox.innerHTML = "";
+      document.getElementById("gate-message").innerHTML = "";
+      document.getElementById("countdown").innerHTML = "";
+      document.getElementById("detected-message").innerHTML = "";
+      document.getElementById("pass-countdown").innerHTML = "";
+
+      if (!baseURL) {
+        errorBox.innerHTML = "Please enter a model URL first.";
+        return;
+      }
+
+      const modelURL = baseURL + "model.json";
+      const metadataURL = baseURL + "metadata.json";
+
+      try {
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        const classes = model.getClassLabels();
+        if (maxPredictions !== 2 ||
+            classes[0] !== "Hovercraft" ||
+            classes[1] !== "No Hovercraft") {
+          errorBox.innerHTML = "Model must have exactly two classes: 'Hovercraft' and 'No Hovercraft' (case-sensitive).";
+          return;
+        }
+
+        const flip = true;
+        webcam = new tmImage.Webcam(200, 200, flip);
+        await webcam.setup();
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        document.getElementById("webcam-container").innerHTML = "";
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
+          labelContainer.appendChild(document.createElement("div"));
+        }
+      } catch (err) {
+        console.error("Error loading model or webcam:", err);
+        errorBox.innerHTML = "Failed to load model or webcam. Check console for details.";
+      }
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+
+      for (let i = 0; i < maxPredictions; i++) {
+        const classPrediction =
+          prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        labelContainer.childNodes[i].innerHTML = classPrediction;
+      }
+
+      const hovercraftProb = prediction[0].probability;
+
+      if (hovercraftProb >= 0.95 && !passTimer) {
+        if (!hovercraftStartTime) {
+          hovercraftStartTime = Date.now();
+        }
+        const elapsed = (Date.now() - hovercraftStartTime) / 1000;
+
+        if (elapsed < 1) {
+          document.getElementById("detected-message").innerText = "Hovercraft Detected";
+        } else if (elapsed >= 1 && !countdownTimer) {
+          document.getElementById("detected-message").innerText = "";
+          startCountdown();
+        }
+      } else if (!passTimer) {
+        hovercraftStartTime = null;
+        resetCountdown();
+      }
+    }
+
+    function startCountdown() {
+      countdownValue = 5;
+      document.getElementById("countdown").innerText = "Countdown: " + countdownValue;
+      countdownTimer = setInterval(() => {
+        countdownValue--;
+        if (countdownValue > 0) {
+          document.getElementById("countdown").innerText = "Countdown: " + countdownValue;
+        } else {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          document.getElementById("countdown").innerText = "";
+          document.getElementById("gate-message").innerText = "Gate Open";
+          console.log("HOVERCRAFT");
+          startPassCountdown();
+        }
+      }, 1000);
+    }
+
+    function startPassCountdown() {
+      passValue = 30;
+      document.getElementById("pass-countdown").innerText = "Gate will close in: " + passValue + "s";
+      passTimer = setInterval(() => {
+        passValue--;
+        if (passValue > 0) {
+          document.getElementById("pass-countdown").innerText = "Gate will close in: " + passValue + "s";
+        } else {
+          clearInterval(passTimer);
+          passTimer = null;
+          document.getElementById("pass-countdown").innerText = "";
+          document.getElementById("gate-message").innerText = "";
+          console.log("CLOSE");
+          hovercraftStartTime = null;
+        }
+      }, 1000);
+    }
+
+    function resetCountdown() {
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      document.getElementById("countdown").innerText = "";
+      document.getElementById("gate-message").innerText = "";
+      document.getElementById("detected-message").innerText = "";
+    }
+  </script>
+</body>
+</html>
