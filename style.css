@@ -88,18 +88,24 @@ button:hover {
   background: #e0e0e0;
   border-radius: 20px;
   overflow: hidden;
+  position: relative;
 }
 
 .progress-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
   width: 0%;
   border-radius: 20px;
-  text-align: right;
-  line-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   padding-right: 10px;
   color: white;
   font-weight: bold;
   transition: width 0.3s ease;
+  box-sizing: border-box;
 }
 
 /* Hovercraft = Green */
