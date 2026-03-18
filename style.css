@@ -65,10 +65,10 @@ button:hover {
 
 #label-container div { margin: 5px 0; }
 #error-message { color: red; font-weight: bold; margin-top: 10px; }
-#detected-message { font-size: 20px; font-weight: bold; color: orange; margin-top: 10px; }
-#countdown { font-size: 20px; font-weight: bold; color: blue; margin-top: 10px; }
-#gate-message { font-size: 24px; font-weight: bold; color: green; margin-top: 10px; }
-#pass-countdown { font-size: 20px; font-weight: bold; color: purple; margin-top: 10px; }
+#detected-message { font-size: 36px; font-weight: bold; color: orange; margin-top: 10px; }
+#countdown { font-size: 36px; font-weight: bold; color: blue; margin-top: 10px; }
+#gate-message { font-size: 48px; font-weight: bold; color: green; margin-top: 10px; }
+#pass-countdown { font-size: 36px; font-weight: bold; color: purple; margin-top: 10px; }
 
 /* ===== Progress Bar System ===== */
 
