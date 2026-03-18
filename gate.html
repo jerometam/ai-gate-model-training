@@ -232,12 +232,19 @@ function startPassCountdown() {
     else {
       clearInterval(passTimer);
       passTimer = null;
-
+    
       document.getElementById("pass-countdown").innerText = "";
-      document.getElementById("gate-message").innerText = "";
-
+      document.getElementById("gate-message").innerText = "閘門關閉中...";
+    
+      // Step 1: Close gate
       sendToArduino("CLOSE");
-
+    
+      // Step 2: After short delay, send HOME
+      setTimeout(() => {
+        sendToArduino("HOME");
+        document.getElementById("gate-message").innerText = "";
+      }, 1000);  // 1 second delay (adjust if needed)
+    
       hovercraftStartTime = null;
       gateCommandSent = false;
     }
