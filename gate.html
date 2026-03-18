@@ -1,161 +1,223 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>沙田區小學 AI 創意解難挑戰賽 2026 | 彎道賽 AI 閘門挑戰</title>
+<meta charset="UTF-8">
+<title>沙田區小學 AI 創意解難挑戰賽 2026 | 彎道賽 AI 閘門挑戰</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
-  <link rel="stylesheet" href="style.css">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  margin: 0;
+  padding: 20px;
+}
+
+#main-container {
+  display: flex;
+  gap: 40px;
+}
+
+#webcam-container canvas {
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#info-container {
+  max-width: 450px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+.progress-wrapper {
+  margin-top: 15px;
+}
+
+.progress-label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 28px;
+  background: #ddd;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 20px;
+  text-align: right;
+  line-height: 28px;
+  padding-right: 10px;
+  color: white;
+  font-weight: bold;
+  transition: width 0.3s ease;
+}
+
+.hovercraft-color {
+  background: linear-gradient(90deg, #00c853, #64dd17);
+}
+
+.nohover-color {
+  background: linear-gradient(90deg, #d50000, #ff5252);
+}
+
+#countdown {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ff6f00;
+}
+
+#gate-message {
+  font-size: 26px;
+  font-weight: bold;
+  color: #00c853;
+}
+
+#pass-countdown {
+  font-weight: bold;
+}
+</style>
 </head>
 
 <body>
 <div id="main-container">
 
-  <div id="webcam-container"></div>
+<div id="webcam-container"></div>
 
-  <div id="info-container">
-    <h2>沙田區小學 AI 創意解難挑戰賽 2026 <br />彎道賽 AI 閘門挑戰</h2>
+<div id="info-container">
+<h2>沙田區小學 AI 創意解難挑戰賽 2026 <br>彎道賽 AI 閘門挑戰</h2>
 
-    <input type="text" id="modelURL" placeholder="請在此貼上模型網址" size="40">
-    <button onclick="init()">連接視覺模型</button>
+<input type="text" id="modelURL" placeholder="請貼上模型網址" size="40">
+<button onclick="init()">連接視覺模型</button>
 
-    <hr>
+<hr>
 
-    <button onclick="connectArduino()">連接 AI 閘門</button>
-    <div id="serial-status"></div>
+<button onclick="connectArduino()">連接 AI 閘門</button>
+<div id="serial-status"></div>
 
-    <hr>
+<hr>
 
-    <div id="error-message"></div>
-    <div id="label-container"></div>
-    <div id="detected-message"></div>
-    <div id="countdown"></div>
-    <div id="gate-message"></div>
-    <div id="pass-countdown"></div>
-  </div>
+<div id="error-message"></div>
 
+<div id="label-container"></div>
+
+<div id="detected-message"></div>
+<div id="countdown"></div>
+<div id="gate-message"></div>
+<div id="pass-countdown"></div>
+
+</div>
 </div>
 
 <script>
-let model, webcam, labelContainer, maxPredictions;
-let countdownTimer = null;
-let countdownValue = 3;
+let model, webcam, maxPredictions;
 let hovercraftStartTime = null;
+let countdownTimer = null;
 let passTimer = null;
-let passValue = 30;
-
+let gateCommandSent = false;
 let port = null;
 let writer = null;
-let gateCommandSent = false;
 
-// ✅ Connect Arduino (robust version)
+let countdownValue = 3;
+let passValue = 30;
+
+// ✅ Connect Arduino
 async function connectArduino() {
-
   const statusBox = document.getElementById("serial-status");
 
   try {
-
     if (!("serial" in navigator)) {
-      statusBox.innerText = "❌ 瀏覽器不支援 Web Serial (請用 Chrome / Edge)";
-      return;
-    }
-
-    // Prevent double-open
-    if (port && port.readable) {
-      statusBox.innerText = "✅ 已連接";
+      statusBox.innerText = "❌ 請使用 Chrome / Edge";
       return;
     }
 
     port = await navigator.serial.requestPort();
 
     await port.open({
-      baudRate: 9600,   // MUST match Arduino
+      baudRate: 9600,
       dataBits: 8,
       stopBits: 1,
-      parity: "none",
-      bufferSize: 255
+      parity: "none"
     });
 
     const encoder = new TextEncoderStream();
     encoder.readable.pipeTo(port.writable);
     writer = encoder.writable.getWriter();
 
-    statusBox.innerText = "✅ Arduino 已成功連接";
-    console.log("✅ Serial Connected");
-
-  } catch (err) {
-
-    console.error("Serial error:", err);
-
-    statusBox.innerText =
-      "❌ 連接失敗: " + err.message +
-      " (請關閉 Arduino IDE Serial Monitor)";
+    statusBox.innerText = "✅ AI 閘門已成功連接";
+  }
+  catch (err) {
+    statusBox.innerText = "❌ 連接失敗: " + err.message;
   }
 }
 
-// ✅ Send Command
 async function sendToArduino(command) {
-  try {
-    if (writer) {
-      await writer.write(command + "\n");
-      console.log("Sent:", command);
-    }
-  } catch (err) {
-    console.error("Write failed:", err);
+  if (writer) {
+    await writer.write(command + "\n");
   }
 }
 
-// ---------------- AI MODEL ----------------
-
+// ✅ Init Model
 async function init() {
 
   const baseURL = document.getElementById("modelURL").value.trim();
-  const errorBox = document.getElementById("error-message");
+  if (!baseURL) return;
 
-  errorBox.innerHTML = "";
-  document.getElementById("gate-message").innerHTML = "";
-  document.getElementById("countdown").innerHTML = "";
-  document.getElementById("detected-message").innerHTML = "";
-  document.getElementById("pass-countdown").innerHTML = "";
+  model = await tmImage.load(baseURL + "model.json", baseURL + "metadata.json");
+  maxPredictions = model.getTotalClasses();
 
-  if (!baseURL) {
-    errorBox.innerHTML = "請先輸入模型網址。";
-    return;
-  }
+  webcam = new tmImage.Webcam(240, 240, true);
+  await webcam.setup();
+  await webcam.play();
+  window.requestAnimationFrame(loop);
 
-  try {
+  document.getElementById("webcam-container").innerHTML = "";
+  document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-    model = await tmImage.load(baseURL + "model.json", baseURL + "metadata.json");
-    maxPredictions = model.getTotalClasses();
+  setupProgressBars();
+}
 
-    const classes = model.getClassLabels();
-    if (maxPredictions !== 2 ||
-        classes[0] !== "Hovercraft" ||
-        classes[1] !== "No Hovercraft") {
-      errorBox.innerHTML = "模型必須有兩個類別：Hovercraft 與 No Hovercraft";
-      return;
-    }
+// ✅ Create Progress Bars
+function setupProgressBars() {
 
-    webcam = new tmImage.Webcam(200, 200, true);
-    await webcam.setup();
-    await webcam.play();
-    window.requestAnimationFrame(loop);
+  const container = document.getElementById("label-container");
+  container.innerHTML = "";
 
-    document.getElementById("webcam-container").innerHTML = "";
-    document.getElementById("webcam-container").appendChild(webcam.canvas);
+  const classes = model.getClassLabels();
 
-    labelContainer = document.getElementById("label-container");
-    labelContainer.innerHTML = "";
-    for (let i = 0; i < maxPredictions; i++) {
-      labelContainer.appendChild(document.createElement("div"));
-    }
+  classes.forEach((label, index) => {
 
-  } catch (err) {
-    console.error(err);
-    errorBox.innerHTML = "載入模型失敗";
-  }
+    const wrapper = document.createElement("div");
+    wrapper.className = "progress-wrapper";
+
+    const labelDiv = document.createElement("div");
+    labelDiv.className = "progress-label";
+    labelDiv.innerText = label;
+
+    const bg = document.createElement("div");
+    bg.className = "progress-bar-bg";
+
+    const fill = document.createElement("div");
+    fill.className = "progress-bar-fill " +
+      (label === "Hovercraft" ? "hovercraft-color" : "nohover-color");
+
+    fill.id = "bar-" + index;
+
+    bg.appendChild(fill);
+    wrapper.appendChild(labelDiv);
+    wrapper.appendChild(bg);
+
+    container.appendChild(wrapper);
+  });
 }
 
 async function loop() {
@@ -168,11 +230,14 @@ async function predict() {
 
   const prediction = await model.predict(webcam.canvas);
 
-  for (let i = 0; i < maxPredictions; i++) {
-    labelContainer.childNodes[i].innerHTML =
-      prediction[i].className + ": " +
-      prediction[i].probability.toFixed(2);
-  }
+  prediction.forEach((pred, i) => {
+
+    const percent = (pred.probability * 100).toFixed(0);
+    const bar = document.getElementById("bar-" + i);
+
+    bar.style.width = percent + "%";
+    bar.innerText = percent + "%";
+  });
 
   const hovercraftProb = prediction[0].probability;
 
@@ -185,9 +250,8 @@ async function predict() {
 
     if (elapsed >= 1 && !countdownTimer)
       startCountdown();
-
-  } else if (!passTimer) {
-
+  }
+  else if (!passTimer) {
     hovercraftStartTime = null;
     resetCountdown();
   }
@@ -210,7 +274,7 @@ function startCountdown() {
       countdownTimer = null;
 
       document.getElementById("countdown").innerText = "";
-      document.getElementById("gate-message").innerText = "閘門開啟";
+      document.getElementById("gate-message").innerText = "✅ 閘門開啟";
 
       if (!gateCommandSent) {
         sendToArduino("HOLD");
@@ -226,7 +290,6 @@ function startCountdown() {
 function startPassCountdown() {
 
   passValue = 30;
-
   document.getElementById("pass-countdown").innerText =
     "閘門將在 " + passValue + " 秒後關閉";
 
@@ -237,8 +300,8 @@ function startPassCountdown() {
     if (passValue > 0) {
       document.getElementById("pass-countdown").innerText =
         "閘門將在 " + passValue + " 秒後關閉";
-    } else {
-
+    }
+    else {
       clearInterval(passTimer);
       passTimer = null;
 
@@ -255,7 +318,6 @@ function startPassCountdown() {
 }
 
 function resetCountdown() {
-
   if (countdownTimer) {
     clearInterval(countdownTimer);
     countdownTimer = null;
