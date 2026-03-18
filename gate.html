@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>沙田區小學 AI 創意解難挑戰賽 2026 | 極速氣墊船彎道賽閘門測試</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="main-container">
+
+    <!-- 左邊 Webcam -->
+    <div id="webcam-container"></div>
+
+    <!-- 右邊 控制區 -->
+    <div id="info-container">
+
+      <h2>Teachable Machine Hovercraft 偵測測試</h2>
+      <p>請貼上你的 Teachable Machine 模型網址（必須有兩個類別：<b>Hovercraft</b> 與 <b>No Hovercraft</b>）</p>
+
+      <input type="text" id="modelURL" placeholder="請在此貼上模型網址" size="40">
+      <button onclick="init()">開始模型</button>
+
+      <hr>
+
+      <!-- ✅ 新增 Arduino 連線 -->
+      <button onclick="connectArduino()">連接 Arduino</button>
+      <div id="serial-status"></div>
+
+      <hr>
+
+      <div id="error-message"></div>
+      <div id="label-container"></div>
+      <div id="detected-message"></div>
+      <div id="countdown"></div>
+      <div id="gate-message"></div>
+      <div id="pass-countdown"></div>
+
+    </div>
+  </div>
+
+<script>
+let model, webcam, labelContainer, maxPredictions;
+
+let countdownTimer = null;
+let countdownValue = 3;
+let hovercraftStartTime = null;
+let passTimer = null;
+let passValue = 30;
+
+// ✅ Serial variables
+let port;
+let writer;
+let gateCommandSent = false;
+
+// --------------------------------------------------
+// ✅ Connect Arduino
+// --------------------------------------------------
+async function connectArduino() {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+
+    const encoder = new TextEncoderStream();
+    encoder.readable.pipeTo(port.writable);
+    writer = encoder.writable.getWriter();
+
+    document.getElementById("serial-status").innerText = "✅ Arduino 已連接";
+    console.log("Arduino Connected");
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("serial-status").innerText = "❌ 連接失敗";
+  }
+}
+
+// --------------------------------------------------
+// ✅ Send Command to Arduino
+// --------------------------------------------------
+async function sendToArduino(command) {
+  if (writer) {
+    await writer.write(command + "\n");
+    console.log("Sent:", command);
+  }
+}
+
+// --------------------------------------------------
+// ✅ Init Model
+// --------------------------------------------------
+async function init() {
+
+  const baseURL = document.getElementById("modelURL").value.trim();
+  const errorBox = document.getElementById("error-message");
+
+  errorBox.innerHTML = "";
+  document.getElementById("gate-message").innerHTML = "";
+  document.getElementById("countdown").innerHTML = "";
+  document.getElementById("detected-message").innerHTML = "";
+  document.getElementById("pass-countdown").innerHTML = "";
+
+  if (!baseURL) {
+    errorBox.innerHTML = "請先輸入模型網址。";
+    return;
+  }
+
+  const modelURL = baseURL + "model.json";
+  const metadataURL = baseURL + "metadata.json";
+
+  try {
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    const classes = model.getClassLabels();
+    if (maxPredictions !== 2 ||
+        classes[0] !== "Hovercraft" ||
+        classes[1] !== "No Hovercraft") {
+      errorBox.innerHTML = "模型必須有兩個類別：Hovercraft 與 No Hovercraft";
+      return;
+    }
+
+    const flip = true;
+    webcam = new tmImage.Webcam(200, 200, flip);
+    await webcam.setup();
+    await webcam.play();
+    window.requestAnimationFrame(loop);
+
+    document.getElementById("webcam-container").innerHTML = "";
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
+    for (let i = 0; i < maxPredictions; i++) {
+      labelContainer.appendChild(document.createElement("div"));
+    }
+
+  } catch (err) {
+    console.error(err);
+    errorBox.innerHTML = "載入模型失敗";
+  }
+}
+
+// --------------------------------------------------
+async function loop() {
+  webcam.update();
+  await predict();
+  window.requestAnimationFrame(loop);
+}
+
+// --------------------------------------------------
+async function predict() {
+
+  const prediction = await model.predict(webcam.canvas);
+
+  for (let i = 0; i < maxPredictions; i++) {
+    const classPrediction =
+      prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+    labelContainer.childNodes[i].innerHTML = classPrediction;
+  }
+
+  const hovercraftProb = prediction[0].probability;
+
+  if (hovercraftProb >= 0.95 && !passTimer) {
+
+    if (!hovercraftStartTime) {
+      hovercraftStartTime = Date.now();
+    }
+
+    const elapsed = (Date.now() - hovercraftStartTime) / 1000;
+
+    if (elapsed < 1) {
+      document.getElementById("detected-message").innerText = "偵測到 Hovercraft";
+    } 
+    else if (elapsed >= 1 && !countdownTimer) {
+      document.getElementById("detected-message").innerText = "";
+      startCountdown();
+    }
+
+  } 
+  else if (!passTimer) {
+    hovercraftStartTime = null;
+    resetCountdown();
+  }
+}
+
+// --------------------------------------------------
+function startCountdown() {
+
+  countdownValue = 3;
+  document.getElementById("countdown").innerText = "倒數：" + countdownValue;
+
+  countdownTimer = setInterval(() => {
+
+    countdownValue--;
+
+    if (countdownValue > 0) {
+      document.getElementById("countdown").innerText = "倒數：" + countdownValue;
+    } 
+    else {
+
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+
+      document.getElementById("countdown").innerText = "";
+      document.getElementById("gate-message").innerText = "閘門開啟";
+
+      // ✅ Send HOLD to Arduino ONLY ONCE
+      if (!gateCommandSent) {
+        sendToArduino("HOLD");
+        gateCommandSent = true;
+      }
+
+      startPassCountdown();
+    }
+
+  }, 1000);
+}
+
+// --------------------------------------------------
+function startPassCountdown() {
+
+  passValue = 30;
+
+  document.getElementById("pass-countdown").innerText =
+    "閘門將在 " + passValue + " 秒後關閉";
+
+  passTimer = setInterval(() => {
+
+    passValue--;
+
+    if (passValue > 0) {
+      document.getElementById("pass-countdown").innerText =
+        "閘門將在 " + passValue + " 秒後關閉";
+    } 
+    else {
+
+      clearInterval(passTimer);
+      passTimer = null;
+
+      document.getElementById("pass-countdown").innerText = "";
+      document.getElementById("gate-message").innerText = "";
+
+      // ✅ Optional close command
+      sendToArduino("CLOSE");
+
+      hovercraftStartTime = null;
+      gateCommandSent = false;
+    }
+
+  }, 1000);
+}
+
+// --------------------------------------------------
+function resetCountdown() {
+
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+
+  document.getElementById("countdown").innerText = "";
+  document.getElementById("gate-message").innerText = "";
+  document.getElementById("detected-message").innerText = "";
+}
+</script>
+</body>
+</html>
